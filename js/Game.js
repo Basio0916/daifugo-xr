@@ -78,10 +78,13 @@ export class Game {
             game: {
                 turnIndicator: document.getElementById('current-player-name'),
                 fieldCards: document.getElementById('field-cards'),
+                fieldTurnRing: document.getElementById('field-turn-ring'),
                 playerHand: document.getElementById('player-hand'),
+                handArea: document.getElementById('hand-area'),
                 playBtn: document.getElementById('play-btn'),
                 passBtn: document.getElementById('pass-btn'),
                 playersInfo: document.querySelectorAll('.player-info'),
+                cpuPlayers: document.querySelectorAll('.cpu-player'),
                 revolutionIndicator: document.getElementById('revolution-indicator'),
                 messageDisplay: document.getElementById('message-display'),
                 resultOverlay: document.getElementById('result-overlay'),
@@ -222,8 +225,9 @@ export class Game {
         this.players = [];
         this.players.push(new Player(0, 'あなた', true));
         
+        const cpuNames = ['太郎', '花子', '次郎', '美咲'];
         for (let i = 1; i < this.settings.playerCount; i++) {
-            this.players.push(new Player(i, `CPU ${i}`, false));
+            this.players.push(new Player(i, cpuNames[i - 1] || `CPU ${i}`, false));
         }
         
         // AI初期化
@@ -254,14 +258,31 @@ export class Game {
     }
 
     updatePlayersInfoUI() {
-        this.ui.game.playersInfo.forEach((el, index) => {
-            if (index < this.players.length) {
+        // CPUプレイヤーのUI更新
+        const cpuFaces = ['😎', '😄', '😊'];
+        const cpuPositions = ['right', 'top', 'left']; // プレイヤー1,2,3の位置
+        
+        this.ui.game.cpuPlayers.forEach((el, index) => {
+            const position = el.classList.contains('right') ? 'right' : 
+                            el.classList.contains('top') ? 'top' : 'left';
+            const posIndex = cpuPositions.indexOf(position);
+            const playerIndex = posIndex + 1; // CPU1, CPU2, CPU3
+            
+            if (playerIndex < this.players.length) {
                 el.classList.remove('hidden');
-                el.querySelector('.player-name').textContent = this.players[index].name;
+                el.dataset.player = playerIndex;
+                el.querySelector('.cpu-name').textContent = this.players[playerIndex].name;
+                el.querySelector('.cpu-face').textContent = cpuFaces[posIndex];
             } else {
                 el.classList.add('hidden');
             }
         });
+        
+        // 3人プレイの場合、左のCPUを非表示
+        if (this.settings.playerCount === 3) {
+            const leftCpu = document.querySelector('.cpu-player.left');
+            if (leftCpu) leftCpu.classList.add('hidden');
+        }
     }
 
     async dealCards() {
@@ -355,12 +376,39 @@ export class Game {
     }
 
     highlightCurrentPlayer() {
+        // CPUプレイヤーのハイライト解除
+        this.ui.game.cpuPlayers.forEach(el => {
+            el.classList.remove('active');
+        });
+        
+        // 旧UIのハイライト
         this.ui.game.playersInfo.forEach((el, index) => {
             el.classList.remove('active');
             if (index === this.currentPlayerIndex) {
                 el.classList.add('active');
             }
         });
+        
+        // 場のターンリング更新
+        const turnRing = this.ui.game.fieldTurnRing;
+        if (turnRing) {
+            turnRing.className = `turn-player-${this.currentPlayerIndex}`;
+        }
+        
+        // プレイヤーの手札エリアのハイライト
+        if (this.currentPlayerIndex === 0) {
+            this.ui.game.handArea?.classList.add('active');
+        } else {
+            this.ui.game.handArea?.classList.remove('active');
+            
+            // CPUプレイヤーをハイライト
+            this.ui.game.cpuPlayers.forEach(el => {
+                const playerIdx = parseInt(el.dataset.player);
+                if (playerIdx === this.currentPlayerIndex) {
+                    el.classList.add('active');
+                }
+            });
+        }
     }
 
     enablePlayerActions() {
@@ -448,6 +496,11 @@ export class Game {
         this.effects.playCardEffect(centerX, centerY);
         this.sound.playCardPlay();
 
+        // CPUの場合、カードが飛んでくるようなアニメーション
+        if (!player.isHuman) {
+            await this.animateCPUCardPlay(player.id, cards.length);
+        }
+
         // 場にカード表示
         this.renderFieldCards(cards);
 
@@ -482,6 +535,29 @@ export class Game {
         this.nextPlayer();
     }
 
+    // CPUがカードを出す時のアニメーション
+    async animateCPUCardPlay(playerId, cardCount) {
+        const cpuEl = document.querySelector(`.cpu-player[data-player="${playerId}"]`);
+        if (!cpuEl) return;
+        
+        const cpuCards = cpuEl.querySelectorAll('.cpu-card-back');
+        const cardsToAnimate = Array.from(cpuCards).slice(0, cardCount);
+        
+        // カードにアニメーションを追加
+        cardsToAnimate.forEach((card, index) => {
+            card.style.transition = 'all 0.3s ease';
+            card.style.transform = 'scale(1.2)';
+            card.style.opacity = '0.5';
+            
+            setTimeout(() => {
+                card.style.transform = 'scale(0)';
+                card.style.opacity = '0';
+            }, 100 + index * 50);
+        });
+        
+        await this.delay(300);
+    }
+
     // パス
     async pass() {
         const player = this.players[this.currentPlayerIndex];
@@ -511,15 +587,62 @@ export class Game {
 
     // CPU ターン処理
     async processCPUTurn(player) {
+        // 思考中表示
+        this.showMessage(`${player.name}が考え中...`);
+        
+        // 思考中の顔に変更
+        this.setCPUFace(player.id, '🤔');
+        
         const move = await this.cpuAI.selectMove(player, this.gameLogic, {
             players: this.players,
             currentPlayer: this.currentPlayerIndex
         });
 
+        // メッセージを消す
+        this.ui.game.messageDisplay.classList.add('hidden');
+
         if (move.type === 'play') {
+            // カードを出す顔
+            this.setCPUFace(player.id, '😤');
+            await this.delay(200);
             await this.executePlay(player, move.cards);
+            // 元の顔に戻す
+            this.resetCPUFace(player.id);
         } else {
+            // パスの顔
+            this.setCPUFace(player.id, '😅');
             await this.pass();
+            // 元の顔に戻す
+            setTimeout(() => this.resetCPUFace(player.id), 500);
+        }
+    }
+    
+    // CPUの表情を変更
+    setCPUFace(playerId, emoji) {
+        const cpuEl = document.querySelector(`.cpu-player[data-player="${playerId}"]`);
+        if (cpuEl) {
+            const faceEl = cpuEl.querySelector('.cpu-face');
+            if (faceEl) {
+                faceEl.textContent = emoji;
+            }
+        }
+    }
+    
+    // CPUの表情を元に戻す
+    resetCPUFace(playerId) {
+        const cpuEl = document.querySelector(`.cpu-player[data-player="${playerId}"]`);
+        if (cpuEl) {
+            const faceEl = cpuEl.querySelector('.cpu-face');
+            if (faceEl) {
+                // 位置に応じた顔を設定
+                if (cpuEl.classList.contains('right')) {
+                    faceEl.textContent = '😎';
+                } else if (cpuEl.classList.contains('top')) {
+                    faceEl.textContent = '😄';
+                } else {
+                    faceEl.textContent = '😊';
+                }
+            }
         }
     }
 
@@ -532,14 +655,46 @@ export class Game {
             const cardEl = card.createDOMElement();
             cardEl.classList.add('field-card');
             cardEl.style.transform = `rotate(${(Math.random() - 0.5) * 10}deg)`;
+            cardEl.style.animation = `cardPlayToField 0.4s ease forwards`;
+            cardEl.style.animationDelay = `${index * 0.05}s`;
             field.appendChild(cardEl);
         });
+
+        // アニメーション用のスタイルを動的追加
+        if (!document.getElementById('card-play-animation')) {
+            const style = document.createElement('style');
+            style.id = 'card-play-animation';
+            style.textContent = `
+                @keyframes cardPlayToField {
+                    0% {
+                        opacity: 0;
+                        transform: translateY(100px) scale(0.5) rotate(0deg);
+                    }
+                    60% {
+                        opacity: 1;
+                        transform: translateY(-10px) scale(1.1) rotate(var(--rotation, 0deg));
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: translateY(0) scale(1) rotate(var(--rotation, 0deg));
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
     }
 
     // 革命処理
     async handleRevolution() {
         this.effects.revolutionEffect();
         this.sound.playRevolution();
+        
+        // 全CPUが驚いた顔に
+        this.players.forEach(p => {
+            if (!p.isHuman) {
+                this.setCPUFace(p.id, '😱');
+            }
+        });
         
         // 革命表示更新
         this.ui.game.revolutionIndicator.classList.toggle('hidden', !this.gameLogic.isRevolution);
@@ -549,6 +704,13 @@ export class Game {
         this.renderPlayerHand();
         
         await this.delay(2000);
+        
+        // 顔を元に戻す
+        this.players.forEach(p => {
+            if (!p.isHuman) {
+                this.resetCPUFace(p.id);
+            }
+        });
     }
 
     // 8切り処理
@@ -602,10 +764,48 @@ export class Game {
         // エフェクト
         this.effects.victoryEffect(player.name, player.isHuman);
         this.sound.playVictory();
+        
+        // CPUの場合、勝利の表情
+        if (!player.isHuman) {
+            this.setCPUFace(player.id, '🎉');
+            
+            // 他のCPUは残念な表情
+            this.players.forEach(p => {
+                if (!p.isHuman && p.id !== player.id && p.isActive) {
+                    this.setCPUFace(p.id, '😢');
+                }
+            });
+            
+            // 少し後で表情を戻す
+            setTimeout(() => {
+                this.players.forEach(p => {
+                    if (!p.isHuman && p.id !== player.id && p.isActive) {
+                        this.resetCPUFace(p.id);
+                    }
+                });
+            }, 2000);
+        } else {
+            // プレイヤーが上がった場合、CPUは残念な表情
+            this.players.forEach(p => {
+                if (!p.isHuman && p.isActive) {
+                    this.setCPUFace(p.id, '😢');
+                }
+            });
+            setTimeout(() => {
+                this.players.forEach(p => {
+                    if (!p.isHuman && p.isActive) {
+                        this.resetCPUFace(p.id);
+                    }
+                });
+            }, 2000);
+        }
 
-        // プレイヤー情報更新
+        // プレイヤー情報更新（旧UI）
         const playerInfo = this.ui.game.playersInfo[player.id];
         playerInfo?.classList.add('finished');
+        
+        // CPUプレイヤーの表示更新
+        this.updateCPUHandsDisplay();
 
         // ゲーム終了チェック
         const activePlayers = this.players.filter(p => p.isActive);
@@ -642,10 +842,60 @@ export class Game {
 
     // カード枚数更新
     updateCardCounts() {
+        // 旧UI更新
         this.ui.game.playersInfo.forEach((el, index) => {
             if (index < this.players.length) {
                 el.querySelector('.card-count').textContent = 
                     `${this.players[index].getHandCount()}枚`;
+            }
+        });
+        
+        // CPUプレイヤーの手札表示更新
+        this.updateCPUHandsDisplay();
+    }
+    
+    // CPUの手札表示を更新
+    updateCPUHandsDisplay() {
+        this.ui.game.cpuPlayers.forEach(el => {
+            const playerIdx = parseInt(el.dataset.player);
+            if (playerIdx >= this.players.length) return;
+            
+            const player = this.players[playerIdx];
+            const cardCount = player.getHandCount();
+            
+            // カード枚数表示
+            const countEl = el.querySelector('.cpu-card-count');
+            if (countEl) {
+                countEl.textContent = `${cardCount}枚`;
+            }
+            
+            // カード裏面表示を更新
+            const cardsContainer = el.querySelector('.cpu-cards');
+            if (cardsContainer) {
+                cardsContainer.innerHTML = '';
+                
+                // 表示するカード数を制限（最大7枚程度）
+                const displayCount = Math.min(cardCount, 7);
+                
+                for (let i = 0; i < displayCount; i++) {
+                    const cardBack = document.createElement('div');
+                    cardBack.className = 'cpu-card-back';
+                    // 少しランダムな角度をつける
+                    const rotation = (i - displayCount / 2) * 3;
+                    
+                    if (el.classList.contains('top')) {
+                        cardBack.style.transform = `rotate(${rotation}deg)`;
+                    }
+                    
+                    cardsContainer.appendChild(cardBack);
+                }
+            }
+            
+            // 終了したプレイヤーの表示
+            if (!player.isActive) {
+                el.classList.add('finished');
+            } else {
+                el.classList.remove('finished');
             }
         });
     }

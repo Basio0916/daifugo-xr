@@ -290,8 +290,7 @@ html, body {
 #turn-indicator {
     position: absolute;
     top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 20px;
     background: var(--ui-bg);
     padding: 15px 40px;
     border-radius: 30px;
@@ -307,27 +306,364 @@ html, body {
 }
 
 /* 場のカード */
-#field-cards {
+#field-area {
     position: absolute;
-    top: 50%;
+    top: 45%;
     left: 50%;
     transform: translate(-50%, -50%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#field-cards {
     min-width: 200px;
     min-height: 140px;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: -30px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 20px;
+    border: 2px dashed rgba(255, 215, 0, 0.3);
+    position: relative;
+    z-index: 10;
 }
 
-/* プレイヤー情報 */
-#players-info {
+/* 場の中央のターンリング */
+#field-turn-ring {
     position: absolute;
-    top: 100px;
-    right: 20px;
+    width: 280px;
+    height: 200px;
+    border: 4px solid transparent;
+    border-radius: 30px;
+    pointer-events: none;
+    transition: all 0.5s ease;
+    z-index: 5;
+}
+
+#field-turn-ring::before {
+    content: '';
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    box-shadow: 0 0 20px var(--accent-color), 0 0 40px var(--accent-color);
+    transition: all 0.5s ease;
+    animation: ringOrbitPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes ringOrbitPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
+    50% { transform: scale(1.2); box-shadow: 0 0 30px currentColor, 0 0 60px currentColor; }
+}
+
+/* ターンリングの位置（プレイヤーに向かって回転） */
+#field-turn-ring.turn-player-0 {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+}
+#field-turn-ring.turn-player-0::before {
+    bottom: -12px;
+    left: 50%;
+    top: auto;
+    transform: translateX(-50%);
+    background: var(--accent-color);
+    color: var(--accent-color);
+}
+
+#field-turn-ring.turn-player-1 {
+    border-color: #ff6b6b;
+    box-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
+}
+#field-turn-ring.turn-player-1::before {
+    top: 50%;
+    left: auto;
+    right: -12px;
+    transform: translateY(-50%);
+    background: #ff6b6b;
+    color: #ff6b6b;
+}
+
+#field-turn-ring.turn-player-2 {
+    border-color: #4ecdc4;
+    box-shadow: 0 0 30px rgba(78, 205, 196, 0.5);
+}
+#field-turn-ring.turn-player-2::before {
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #4ecdc4;
+    color: #4ecdc4;
+}
+
+#field-turn-ring.turn-player-3 {
+    border-color: #a66cff;
+    box-shadow: 0 0 30px rgba(166, 108, 255, 0.5);
+}
+#field-turn-ring.turn-player-3::before {
+    top: 50%;
+    left: -12px;
+    right: auto;
+    transform: translateY(-50%);
+    background: #a66cff;
+    color: #a66cff;
+}
+
+/* CPUプレイヤー表示エリア */
+#cpu-players-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.cpu-player {
+    position: absolute;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    align-items: center;
+    transition: all 0.3s ease;
+    pointer-events: auto;
+}
+
+/* 上側のCPU（正面の対戦相手） */
+.cpu-player.top {
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* 右側のCPU */
+.cpu-player.right {
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    flex-direction: row-reverse;
+}
+
+/* 左側のCPU */
+.cpu-player.left {
+    top: 50%;
+    left: 20px;
+    transform: translateY(-50%);
+    flex-direction: row;
+}
+
+/* CPUアバター */
+.cpu-avatar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 5px;
+}
+
+.cpu-face {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(145deg, #3d3d3d, #2a2a2a);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    border: 3px solid #555;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+}
+
+.cpu-player.active .cpu-face {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 20px var(--accent-color);
+    animation: faceGlow 1s ease-in-out infinite;
+}
+
+@keyframes faceGlow {
+    0%, 100% { box-shadow: 0 0 20px var(--accent-color); }
+    50% { box-shadow: 0 0 40px var(--accent-color), 0 0 60px var(--accent-color); }
+}
+
+.cpu-player.right.active .cpu-face {
+    border-color: #ff6b6b;
+    box-shadow: 0 0 20px #ff6b6b;
+}
+
+.cpu-player.top.active .cpu-face {
+    border-color: #4ecdc4;
+    box-shadow: 0 0 20px #4ecdc4;
+}
+
+.cpu-player.left.active .cpu-face {
+    border-color: #a66cff;
+    box-shadow: 0 0 20px #a66cff;
+}
+
+.cpu-name {
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin-top: 5px;
+    color: var(--text-color);
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* CPUの手札表示 */
+.cpu-hand {
+    position: relative;
+    margin: 5px;
+}
+
+.cpu-cards {
+    display: flex;
+    justify-content: center;
+}
+
+/* CPUのカード（裏向き） */
+.cpu-card-back {
+    width: 40px;
+    height: 60px;
+    background: linear-gradient(145deg, #1a472a, #0d2818);
+    border: 2px solid #2d5a3d;
+    border-radius: 5px;
+    margin: 0 -15px;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.cpu-card-back::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 25px;
+    height: 35px;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 3px;
+}
+
+.cpu-card-back::after {
+    content: '♠';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1rem;
+    color: rgba(255, 215, 0, 0.4);
+}
+
+/* 左右のCPUは縦向きにカード表示 */
+.cpu-player.left .cpu-cards,
+.cpu-player.right .cpu-cards {
+    flex-direction: column;
+}
+
+.cpu-player.left .cpu-card-back,
+.cpu-player.right .cpu-card-back {
+    margin: -20px 0;
+    transform: rotate(90deg);
+}
+
+.cpu-player.right .cpu-card-back {
+    transform: rotate(-90deg);
+}
+
+/* カード枚数表示 */
+.cpu-card-count {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    margin-top: 5px;
+}
+
+/* ターンマーカー */
+.turn-marker {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.cpu-player.active .turn-marker {
+    opacity: 1;
+}
+
+.cpu-player.active .turn-marker::before {
+    content: '▼';
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.5rem;
+    color: var(--accent-color);
+    animation: turnBounce 0.5s ease-in-out infinite;
+}
+
+.cpu-player.left.active .turn-marker::before {
+    content: '▶';
+    bottom: auto;
+    left: auto;
+    right: -25px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a66cff;
+}
+
+.cpu-player.right.active .turn-marker::before {
+    content: '◀';
+    bottom: auto;
+    right: auto;
+    left: -25px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ff6b6b;
+}
+
+.cpu-player.top.active .turn-marker::before {
+    content: '▼';
+    top: auto;
+    bottom: -25px;
+    color: #4ecdc4;
+}
+
+@keyframes turnBounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(5px); }
+}
+
+.cpu-player.left.active .turn-marker::before,
+.cpu-player.right.active .turn-marker::before {
+    animation: turnBounceSide 0.5s ease-in-out infinite;
+}
+
+@keyframes turnBounceSide {
+    0%, 100% { transform: translateY(-50%) translateX(0); }
+    50% { transform: translateY(-50%) translateX(5px); }
+}
+
+/* 終了したCPU */
+.cpu-player.finished {
+    opacity: 0.4;
+}
+
+.cpu-player.finished .cpu-face {
+    filter: grayscale(1);
+}
+
+/* プレイヤー情報（右サイドバー - 非表示に） */
+#players-info {
+    display: none;
 }
 
 .player-info {
@@ -368,6 +704,32 @@ html, body {
     max-width: 1200px;
 }
 
+/* プレイヤーのターンマーカー */
+#hand-area .player-turn-marker {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.5rem;
+    color: var(--accent-color);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#hand-area .player-turn-marker::before {
+    content: '▲ あなたの番 ▲';
+    animation: playerTurnPulse 1s ease-in-out infinite;
+}
+
+@keyframes playerTurnPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+#hand-area.active .player-turn-marker {
+    opacity: 1;
+}
+
 #player-hand {
     display: flex;
     justify-content: center;
@@ -383,7 +745,7 @@ html, body {
 .card {
     width: 80px;
     height: 120px;
-    background: linear-gradient(145deg, #ffffff, #e0e0e0);
+    background: linear-gradient(145deg, #ffffff, #f0f0f0);
     border-radius: 8px;
     box-shadow: var(--card-shadow);
     cursor: pointer;
@@ -395,6 +757,19 @@ html, body {
     padding: 5px;
     user-select: none;
     margin-left: -25px;
+    border: 1px solid #ddd;
+    animation: cardAppear 0.3s ease forwards;
+}
+
+@keyframes cardAppear {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .card:first-child {
@@ -422,12 +797,46 @@ html, body {
     font-weight: bold;
 }
 
+.card .suit-rank.bottom {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    transform: rotate(180deg);
+}
+
 .card .center-suit {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 2.5rem;
+}
+
+.card .center-suits {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    width: 60px;
+}
+
+.card .suit-icon {
+    font-size: 1.2rem;
+}
+
+.card .joker-text {
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6rem;
+    font-weight: bold;
+    color: #000;
 }
 
 .card.red {
@@ -441,6 +850,7 @@ html, body {
 .card.joker {
     background: linear-gradient(145deg, #ffd700, #ff8c00);
     color: #000;
+    border: 2px solid #ff6600;
 }
 
 .card.joker .center-suit {
@@ -767,6 +1177,56 @@ html, body {
         padding: 8px 12px;
         font-size: 0.9rem;
         min-width: 120px;
+    }
+    
+    /* CPUプレイヤーのモバイル調整 */
+    .cpu-face {
+        width: 45px;
+        height: 45px;
+        font-size: 1.5rem;
+    }
+    
+    .cpu-name {
+        font-size: 0.7rem;
+    }
+    
+    .cpu-card-back {
+        width: 30px;
+        height: 45px;
+        margin: 0 -12px;
+    }
+    
+    .cpu-player.left .cpu-card-back,
+    .cpu-player.right .cpu-card-back {
+        margin: -15px 0;
+    }
+    
+    .cpu-card-count {
+        font-size: 0.7rem;
+        padding: 2px 8px;
+    }
+    
+    #field-area {
+        top: 40%;
+    }
+    
+    #field-cards {
+        min-width: 150px;
+        min-height: 100px;
+        padding: 10px;
+    }
+    
+    #field-turn-ring {
+        width: 200px;
+        height: 140px;
+    }
+    
+    .cpu-player.right {
+        right: 5px;
+    }
+    
+    .cpu-player.left {
+        left: 5px;
     }
 }
 

@@ -119,10 +119,55 @@
                 <span id="current-player-name">あなたのターン</span>
             </div>
             
-            <!-- 中央の場 -->
-            <div id="field-cards"></div>
+            <!-- CPUプレイヤー表示エリア -->
+            <div id="cpu-players-area">
+                <!-- 左側のCPU -->
+                <div class="cpu-player left" data-player="3">
+                    <div class="cpu-avatar">
+                        <div class="cpu-face">😊</div>
+                        <div class="cpu-name">CPU 3</div>
+                    </div>
+                    <div class="cpu-hand">
+                        <div class="cpu-cards"></div>
+                    </div>
+                    <div class="cpu-card-count">13枚</div>
+                    <div class="turn-marker"></div>
+                </div>
+                
+                <!-- 上側のCPU -->
+                <div class="cpu-player top" data-player="2">
+                    <div class="cpu-avatar">
+                        <div class="cpu-face">😄</div>
+                        <div class="cpu-name">CPU 2</div>
+                    </div>
+                    <div class="cpu-hand">
+                        <div class="cpu-cards"></div>
+                    </div>
+                    <div class="cpu-card-count">13枚</div>
+                    <div class="turn-marker"></div>
+                </div>
+                
+                <!-- 右側のCPU -->
+                <div class="cpu-player right" data-player="1">
+                    <div class="cpu-avatar">
+                        <div class="cpu-face">😎</div>
+                        <div class="cpu-name">CPU 1</div>
+                    </div>
+                    <div class="cpu-hand">
+                        <div class="cpu-cards"></div>
+                    </div>
+                    <div class="cpu-card-count">13枚</div>
+                    <div class="turn-marker"></div>
+                </div>
+            </div>
             
-            <!-- プレイヤー情報 -->
+            <!-- 中央の場 -->
+            <div id="field-area">
+                <div id="field-cards"></div>
+                <div id="field-turn-ring"></div>
+            </div>
+            
+            <!-- プレイヤー情報（サイドバー） -->
             <div id="players-info">
                 <div class="player-info" data-player="0">
                     <span class="player-name">あなた</span>
@@ -144,6 +189,7 @@
             
             <!-- 手札エリア -->
             <div id="hand-area">
+                <div class="player-turn-marker"></div>
                 <div id="player-hand"></div>
             </div>
             

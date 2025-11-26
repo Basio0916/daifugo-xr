@@ -81,17 +81,42 @@ export class Card {
             cardEl.classList.add('joker');
             cardEl.innerHTML = `
                 <div class="suit-rank">🃏</div>
-                <div class="center-suit">JOKER</div>
+                <div class="center-suit">🃏</div>
+                <div class="joker-text">JOKER</div>
             `;
         } else {
+            // カード中央に複数のスートを配置
+            const centerSuits = this.generateCenterSuits();
             cardEl.innerHTML = `
-                <div class="suit-rank">${this.getDisplay()}${this.getSuitSymbol()}</div>
-                <div class="center-suit">${this.getSuitSymbol()}</div>
-                <div class="suit-rank bottom">${this.getDisplay()}${this.getSuitSymbol()}</div>
+                <div class="suit-rank">${this.getDisplay()}<br>${this.getSuitSymbol()}</div>
+                <div class="center-suits">${centerSuits}</div>
+                <div class="suit-rank bottom">${this.getDisplay()}<br>${this.getSuitSymbol()}</div>
             `;
         }
         
         return cardEl;
+    }
+
+    // カード中央のスート配置を生成
+    generateCenterSuits() {
+        const symbol = this.getSuitSymbol();
+        const rank = this.rank;
+        
+        // 数字に応じてスートの数を決定
+        let count = rank;
+        if (rank === 1) count = 1;  // A
+        else if (rank === 11) count = 2; // J
+        else if (rank === 12) count = 2; // Q
+        else if (rank === 13) count = 2; // K
+        else if (rank > 10) count = Math.min(rank, 10);
+        
+        count = Math.min(count, 5); // 最大5つまで表示
+        
+        let html = '';
+        for (let i = 0; i < count; i++) {
+            html += `<span class="suit-icon">${symbol}</span>`;
+        }
+        return html;
     }
 
     // スペードの3かどうか
