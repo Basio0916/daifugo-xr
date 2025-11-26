@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>大富豪 VR - WebXR トランプゲーム</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- ローディング画面 -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <h1>大富豪 VR</h1>
+            <div class="loading-spinner"></div>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- タイトル画面 -->
+    <div id="title-screen" class="screen hidden">
+        <div class="title-content">
+            <h1>大富豪 VR</h1>
+            <div class="menu-buttons">
+                <button id="start-game-btn" class="menu-btn">ゲーム開始</button>
+                <button id="settings-btn" class="menu-btn">設定</button>
+                <button id="rules-btn" class="menu-btn">ルール説明</button>
+            </div>
+            <div class="player-count-selector">
+                <label>プレイヤー数:</label>
+                <select id="player-count">
+                    <option value="4" selected>4人</option>
+                    <option value="3">3人</option>
+                </select>
+            </div>
+            <div class="difficulty-selector">
+                <label>CPU難易度:</label>
+                <select id="cpu-difficulty">
+                    <option value="easy">簡単</option>
+                    <option value="normal" selected>普通</option>
+                    <option value="hard">難しい</option>
+                </select>
+            </div>
+            <button id="enter-vr-btn" class="vr-btn">VRモードで開始</button>
+        </div>
+    </div>
+
+    <!-- 設定画面 -->
+    <div id="settings-screen" class="screen hidden">
+        <div class="settings-content">
+            <h2>設定</h2>
+            <div class="setting-item">
+                <label>BGM音量</label>
+                <input type="range" id="bgm-volume" min="0" max="100" value="50">
+            </div>
+            <div class="setting-item">
+                <label>効果音音量</label>
+                <input type="range" id="sfx-volume" min="0" max="100" value="70">
+            </div>
+            <div class="setting-item">
+                <label>革命あり</label>
+                <input type="checkbox" id="revolution-enabled" checked>
+            </div>
+            <div class="setting-item">
+                <label>8切り</label>
+                <input type="checkbox" id="eight-cut-enabled" checked>
+            </div>
+            <div class="setting-item">
+                <label>スペ3返し</label>
+                <input type="checkbox" id="spade3-return-enabled" checked>
+            </div>
+            <div class="setting-item">
+                <label>階段あり</label>
+                <input type="checkbox" id="stairs-enabled" checked>
+            </div>
+            <button id="settings-back-btn" class="menu-btn">戻る</button>
+        </div>
+    </div>
+
+    <!-- ルール説明画面 -->
+    <div id="rules-screen" class="screen hidden">
+        <div class="rules-content">
+            <h2>ルール説明</h2>
+            <div class="rules-text">
+                <h3>基本ルール</h3>
+                <p>大富豪は、手札を早くなくした人から順位が決まるトランプゲームです。</p>
+                
+                <h3>カードの強さ</h3>
+                <p>3 < 4 < 5 < 6 < 7 < 8 < 9 < 10 < J < Q < K < A < 2 < ジョーカー</p>
+                
+                <h3>出し方</h3>
+                <ul>
+                    <li>シングル: 1枚出し</li>
+                    <li>ペア: 同じ数字2枚</li>
+                    <li>トリプル: 同じ数字3枚</li>
+                    <li>クアッド: 同じ数字4枚</li>
+                    <li>階段: 同じスートの連番3枚以上</li>
+                </ul>
+                
+                <h3>特殊ルール</h3>
+                <ul>
+                    <li><strong>革命:</strong> 4枚以上の同じ数字を出すとカードの強さが逆転</li>
+                    <li><strong>8切り:</strong> 8を含む組み合わせで場が流れる</li>
+                    <li><strong>スペ3返し:</strong> ジョーカー単体にスペードの3で勝てる</li>
+                </ul>
+            </div>
+            <button id="rules-back-btn" class="menu-btn">戻る</button>
+        </div>
+    </div>
+
+    <!-- ゲーム画面 -->
+    <div id="game-screen" class="screen hidden">
+        <!-- 3D描画キャンバス -->
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- UI オーバーレイ -->
+        <div id="game-ui">
+            <!-- ターン表示 -->
+            <div id="turn-indicator">
+                <span id="current-player-name">あなたのターン</span>
+            </div>
+            
+            <!-- 中央の場 -->
+            <div id="field-cards"></div>
+            
+            <!-- プレイヤー情報 -->
+            <div id="players-info">
+                <div class="player-info" data-player="0">
+                    <span class="player-name">あなた</span>
+                    <span class="card-count">13枚</span>
+                </div>
+                <div class="player-info" data-player="1">
+                    <span class="player-name">CPU 1</span>
+                    <span class="card-count">13枚</span>
+                </div>
+                <div class="player-info" data-player="2">
+                    <span class="player-name">CPU 2</span>
+                    <span class="card-count">13枚</span>
+                </div>
+                <div class="player-info" data-player="3">
+                    <span class="player-name">CPU 3</span>
+                    <span class="card-count">13枚</span>
+                </div>
+            </div>
+            
+            <!-- 手札エリア -->
+            <div id="hand-area">
+                <div id="player-hand"></div>
+            </div>
+            
+            <!-- アクションボタン -->
+            <div id="action-buttons">
+                <button id="play-btn" class="action-btn" disabled>出す</button>
+                <button id="pass-btn" class="action-btn">パス</button>
+            </div>
+            
+            <!-- ステータス表示 -->
+            <div id="game-status">
+                <div id="revolution-indicator" class="status-item hidden">
+                    <span>🔄 革命中!</span>
+                </div>
+            </div>
+            
+            <!-- メッセージ表示 -->
+            <div id="message-display" class="hidden"></div>
+        </div>
+        
+        <!-- 結果画面 -->
+        <div id="result-overlay" class="hidden">
+            <div class="result-content">
+                <h2 id="result-title">ゲーム終了</h2>
+                <div id="result-rankings"></div>
+                <div class="result-buttons">
+                    <button id="rematch-btn" class="menu-btn">もう一度</button>
+                    <button id="back-to-title-btn" class="menu-btn">タイトルへ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- エフェクト用コンテナ -->
+    <div id="effects-container"></div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- GSAP アニメーション -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <!-- ゲームスクリプト -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
